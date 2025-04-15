@@ -2,8 +2,6 @@ import { USER_SERVICE_URL } from '@/envConfig';
 import axios from 'axios';
 import { useState } from 'react';
 
-
-
 export const useUser = () => {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);

@@ -1,6 +1,7 @@
 import { createSlice, PayloadAction } from '@reduxjs/toolkit';
 
 interface FormData {
+  userId?:string
   firstName: string;
   lastName: string;
   wheels: string;
@@ -11,6 +12,7 @@ interface FormData {
 }
 
 const initialState: FormData = {
+  userId:'',
   firstName: '',
   lastName: '',
   wheels: '',

@@ -8,17 +8,19 @@ import {
   Select,
   TextInput,
   Container,
+  Loader,
 } from '@mantine/core';
 import dynamic from 'next/dynamic';
 
-const DateTimePicker = dynamic(() => import('@mantine/dates').then(m => m.DateTimePicker), {
+const DatePicker = dynamic(() => import('@mantine/dates').then(m => m.DateInput), {
   ssr: false
 });
 import { useDispatch, useSelector } from 'react-redux';
 import { resetFormData, setFormData } from '@/redux/formSlice';
 import { RootState } from '@/redux/store';
-import { shiftTimezone  } from '@mantine/dates';
+import {  shiftTimezone  } from '@mantine/dates';
 import { useVehiclesByType } from '../hooks/useVehiclesByType';
+import { useUser } from '../hooks/useUser';
 
 const TOTAL_STEPS = 5;
 
@@ -30,12 +32,13 @@ const StepWrapper = ({ title, subtitle, children }: any) => (
   </div>
 );
 
-const NavigationButtons = ({ onSave , goBack, disabled=false  }: { onSave: () => void  ,goBack?: () => void  ,  disabled?:boolean}) => (
+const NavigationButtons = ({ onSave , goBack, disabled=false  , isLoading=false }: { onSave: () => void  ,goBack?: () => void  ,  disabled?:boolean , isLoading?:boolean}) => (
   <div className="flex justify-between mt-16">
-    <Button onClick={goBack} variant="outline" color="dark" radius="xl" >
+    <Button onClick={goBack} variant="outline" color="dark" radius="xl" disabled={isLoading} >
       Cancel
     </Button>
-    <Button onClick={onSave} color="dark" radius="xl" disabled={disabled}>
+    <Button onClick={onSave} color="dark" radius="xl" disabled={disabled || isLoading }>
+      {isLoading && <Loader size={18} />}
       Save
     </Button>
   </div>
@@ -55,6 +58,9 @@ function GeneralBookingForm() {
   
   const { vehicles: vehicleCategories, loading } = useVehiclesByType(formData.wheels as 'TWO_WHEELER' | 'FOUR_WHEELER');
 
+  const { addNewUser, loading: userLoading, error: userError } = useUser();
+
+
   console.log(vehicleCategories)
  
   
@@ -67,6 +73,21 @@ function GeneralBookingForm() {
       dispatch(setFormData({ [field]: value }));
     }
   };
+
+  const handleUserSubmit = async () => {
+    const payload = {
+      firstName: formData.firstName,
+      lastName: formData.lastName,
+    };
+  
+    const createdUser = await addNewUser(payload);
+  
+    if (createdUser) {
+      nextStep();
+      dispatch(setFormData({ userId:createdUser?.id}));
+    }
+  };
+  
   
 
   return (
@@ -75,8 +96,9 @@ function GeneralBookingForm() {
         <div>
         <h3 className="text-2xl font-medium">Booking Information</h3>
         <p className="text-sm text-gray-600">
-          Provide a few quick details to start your vehicle rental — it only takes a minute.
+          Provide a few quick details to start your vehicle rental — it only takes a minute. 
         </p>
+
         </div>
         <Button radius={'xl'} className=' px-3 py-2  text-xs uppercase' onClick={() => dispatch(resetFormData())}>
           Create New Booking
@@ -91,7 +113,7 @@ function GeneralBookingForm() {
         {currentStep === 1 && (
           <StepWrapper
             title="Rental Information"
-            subtitle="Please provide the renter's details."
+            subtitle="note*- Rental user detail Once saved can't be change else need to create new booking"
           >
             <div className="flex gap-6">
               <TextInput
@@ -99,15 +121,18 @@ function GeneralBookingForm() {
                 value={formData.firstName}
                 onChange={(e) => handleChange('firstName', e.currentTarget.value)}
                className="w-full"
+               disabled={!!formData.userId}
+
               />
               <TextInput
                 label="Last Name"
                 value={formData.lastName}
                 onChange={(e) => handleChange('lastName', e.currentTarget.value)}
                 className="w-full"
+                disabled={!!formData.userId}
               />
             </div>
-            <NavigationButtons onSave={nextStep} />
+            <NavigationButtons onSave={ formData.userId? nextStep: handleUserSubmit} isLoading={loading} />
           </StepWrapper>
         )}
 
@@ -223,19 +248,19 @@ function GeneralBookingForm() {
             subtitle="Choose when you need the vehicle."
           >
             <div className="flex gap-4 flex-col md:flex-row">
-              <DateTimePicker
+              <DatePicker
                 label="Start Date"
                 value={formData.startDate ? new Date(formData.startDate) : null}
                 onChange={(value) => handleChange('startDate', value)}
                 className="w-full"
-                size="lg"
+                size="md"
               />
-              <DateTimePicker
+              <DatePicker
                 label="End Date"
                 value={formData.endDate ? new Date(formData.endDate) : null}
                 onChange={(value) => handleChange('endDate', value)}
                 className="w-full"
-                size="lg"
+                size="md"
               />
             </div>
             <NavigationButtons onSave={() => console.log('Final Submission', formData)} goBack={prevStep}  disabled={!formData?.startDate && !formData?.endDate} />
