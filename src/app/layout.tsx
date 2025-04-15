@@ -29,7 +29,7 @@ export default function RootLayout({
   return (
     <html lang="en">
       <head>
-      <ColorSchemeScript defaultColorScheme="light" />
+      {/* <ColorSchemeScript defaultColorScheme="light" /> */}
       </head>
       <body
         className={`${geistSans.variable} ${geistMono.variable} antialiased`}

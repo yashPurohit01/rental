@@ -20,7 +20,10 @@ import { resetFormData, setFormData } from '@/redux/formSlice';
 import { RootState } from '@/redux/store';
 import {  shiftTimezone  } from '@mantine/dates';
 import { useVehiclesByType } from '../hooks/useVehiclesByType';
+
+import { toast } from 'sonner';
 import { useUser } from '../hooks/useUser';
+import { useCreateBooking } from '../hooks/useBookingHook';
 
 const TOTAL_STEPS = 5;
 
@@ -60,6 +63,7 @@ function GeneralBookingForm() {
 
   const { addNewUser, loading: userLoading, error: userError } = useUser();
 
+  const { createBooking, loading:bookingLoader, error, success } = useCreateBooking();
 
   console.log(vehicleCategories)
  
@@ -68,11 +72,24 @@ function GeneralBookingForm() {
     if (field === 'startDate' || field === 'endDate') {
       const shifted = shiftTimezone('output' as any, value, 'UTC');
       const iso = shifted instanceof Date ? shifted.toISOString() : null;
-      dispatch(setFormData({ [field]: iso }));
+       if(field === 'startDate' ){
+        dispatch(setFormData({ [field]: iso }));
+       }
+  
+      const start = field === 'startDate' ? value : new Date(formData.startDate);
+      const end = field === 'endDate' ? value : new Date(formData.endDate);
+  
+      if (start && end && new Date(end) <= new Date(start)) {
+        toast.error('End date must be after start date');
+      } 
+      else{
+        dispatch(setFormData({ [field]: iso }));
+      }
     } else {
       dispatch(setFormData({ [field]: value }));
     }
   };
+  
 
   const handleUserSubmit = async () => {
     const payload = {
@@ -88,6 +105,27 @@ function GeneralBookingForm() {
     }
   };
   
+  const handleBookingCreation = async () => {
+    const {userId , startDate, endDate , model} = formData
+    const payload = {
+      userId,
+      startDate,
+      endDate,
+      vehicleId:model
+
+    };
+
+    const newBooking = await createBooking(payload);
+
+    console.log(payload ,newBooking )
+  
+    // const createdUser = await addNewUser(payload);
+  
+    // if (createdUser) {
+    //   nextStep();
+    //   dispatch(setFormData({ userId:createdUser?.id}));
+    // }
+  }
   
 
   return (
@@ -113,7 +151,7 @@ function GeneralBookingForm() {
         {currentStep === 1 && (
           <StepWrapper
             title="Rental Information"
-            subtitle="note*- Rental user detail Once saved can't be change else need to create new booking"
+            subtitle="Rental user detail Once saved can't be change else need to create new booking(*)"
           >
             <div className="flex gap-6">
               <TextInput
@@ -153,44 +191,6 @@ function GeneralBookingForm() {
             <NavigationButtons onSave={nextStep} goBack={prevStep} disabled={!formData.wheels} />
           </StepWrapper>
         )}
-
-        {/* {currentStep === 3 && (
-          <StepWrapper
-            title="Choose Vehicle Type"
-            subtitle="Pick a vehicle type based on the wheels selected."
-          >
-            <Select
-              label="Vehicle Type"
-              placeholder="Select vehicle type"
-              data={['Scooter', 'Motorcycle', 'Car', 'SUV']}
-              value={formData.vehicleType}
-              onChange={(value) => handleChange('vehicleType', value)}
-              size="md"
-              radius="md"
-              className="w-full max-w-md"
-            />
-            <NavigationButtons onSave={nextStep} />
-          </StepWrapper>
-        )} */}
- 
-        {/* {currentStep === 4 && (
-          <StepWrapper
-            title="Select Vehicle Model"
-            subtitle="Choose a model based on the vehicle type."
-          >
-            <Select
-              label="Vehicle Model"
-              placeholder="Select model"
-              data={['Model A', 'Model B', 'Model C']}
-              value={formData.model}
-              onChange={(value) => handleChange('model', value)}
-              size="lg"
-              radius="lg"
-              className="w-full max-w-md"
-            />
-            <NavigationButtons onSave={nextStep} />
-          </StepWrapper>
-        )} */}
 
 {currentStep === 3 && (
   <StepWrapper
@@ -263,7 +263,7 @@ function GeneralBookingForm() {
                 size="md"
               />
             </div>
-            <NavigationButtons onSave={() => console.log('Final Submission', formData)} goBack={prevStep}  disabled={!formData?.startDate && !formData?.endDate} />
+            <NavigationButtons onSave={handleBookingCreation} goBack={prevStep}  disabled={!formData?.startDate && !formData?.endDate} />
           </StepWrapper>
         )}
       </div>
